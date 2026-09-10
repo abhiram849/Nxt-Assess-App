@@ -1,0 +1,99 @@
+.assessment-container {
+  min-height: calc(100vh - 72px);
+  padding: 32px 24px;
+  background-color: #f8fafc;
+  display: flex;
+  justify-content: center;
+}
+
+.assessment-main-content {
+  max-width: 1100px;
+  width: 100%;
+}
+
+.assessment-body {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+/* Loader Styles */
+.loader-container {
+  min-height: calc(100vh - 120px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.loader {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Failure View Styles */
+.failure-view-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 120px);
+  text-align: center;
+  padding: 24px;
+  width: 100%;
+}
+
+.failure-image {
+  width: 260px;
+  max-width: 100%;
+  margin-bottom: 24px;
+}
+
+.failure-heading {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 12px;
+}
+
+.failure-description {
+  font-size: 15px;
+  color: #64748b;
+  margin-bottom: 24px;
+}
+
+.retry-button {
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.retry-button:hover {
+  background-color: #1d4ed8;
+}
+
+@media (max-width: 900px) {
+  .assessment-container {
+    padding: 16px 12px;
+  }
+
+  .assessment-body {
+    flex-direction: column;
+    gap: 20px;
+  }
+}

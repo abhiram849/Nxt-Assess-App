@@ -1,0 +1,40 @@
+.assessment-configuration-container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-count {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.answered-count {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.unanswered-count {
+  border: 1px solid #94a3b8;
+  color: #475569;
+  background-color: #ffffff;
+}
+
+.status-label {
+  font-size: 14px;
+  color: #334155;
+  font-weight: 500;
+}

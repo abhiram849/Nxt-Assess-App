@@ -1,0 +1,27 @@
+.default-option-item {
+  list-style-type: none;
+  margin-bottom: 12px;
+}
+
+.default-option-btn {
+  width: 100%;
+  text-align: left;
+  padding: 14px 20px;
+  background-color: #f1f5f9;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #334155;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.default-option-btn:hover {
+  background-color: #e2e8f0;
+}
+
+.default-option-btn.selected-default-option {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}

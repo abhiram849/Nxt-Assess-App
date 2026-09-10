@@ -1,0 +1,40 @@
+.select-component-container {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.select-dropdown-wrapper {
+  max-width: 400px;
+  width: 100%;
+}
+
+.select-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #1e293b;
+  font-size: 15px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.select-input:focus {
+  border-color: #2563eb;
+}
+
+.select-option {
+  padding: 8px;
+  color: #1e293b;
+}
+
+.default-selected-text {
+  font-size: 13px;
+  color: #64748b;
+  font-style: italic;
+}

@@ -1,10 +1,7 @@
-import React, {useState, useContext} from 'react'
-import {useNavigate, Navigate} from 'react-router-dom'
-import Cookies from 'js-cookie'
-import EvaluationContext from '../../context/EvaluationContext.jsx'
+import React, {useContext, useState} from 'react'
+import {Navigate, useNavigate} from 'react-router-dom'
+import EvaluationContext from '../../context/EvaluationContext'
 import './index.css'
-
-const loginApiUrl = 'https://apis.ccbp.in/login'
 
 const Login = () => {
   const {isAuthenticated, login} = useContext(EvaluationContext)
@@ -15,7 +12,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [showSubmitError, setShowSubmitError] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />
@@ -29,58 +26,48 @@ const Login = () => {
     setPassword(event.target.value)
   }
 
-  const onToggleShowPassword = () => {
+  const onChangeShowPassword = () => {
     setShowPassword(previousState => !previousState)
   }
 
-  const onSubmitSuccess = jwtToken => {
-    Cookies.set('jwt_token', jwtToken, {expires: 30})
-    login(jwtToken)
-    navigate('/', {replace: true})
-  }
+  const onSubmitLogin = async event => {
+  event.preventDefault()
 
-  const onSubmitForm = async event => {
-    event.preventDefault()
+  setIsSubmitting(true)
+  setShowSubmitError(false)
 
-    setShowSubmitError(false)
-    setErrorMsg('')
-
-    if (username.trim() === '' || password === '') {
-      setShowSubmitError(true)
-      setErrorMsg('Username and Password are required')
-      return
-    }
-
-    setIsLoading(true)
-
-    const userDetails = {
-      username: username.trim(),
-      password,
-    }
-
-    const options = {
+  try {
+    const response = await fetch('http://localhost:5000/api/login', {
       method: 'POST',
-      body: JSON.stringify(userDetails),
-    }
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        username,
+        password,
+      }),
+    })
 
-    try {
-      const response = await fetch(loginApiUrl, options)
-      const data = await response.json()
+    const data = await response.json()
 
-      if (response.ok) {
-        onSubmitSuccess(data.jwt_token)
-      } else {
-        setShowSubmitError(true)
-        setErrorMsg(data.error_msg || 'Invalid username or password')
-      }
-    } catch (error) {
-      console.error('Login API error:', error)
+    if (response.ok) {
+      login(data.user)
+      navigate('/', {replace: true})
+    } else {
       setShowSubmitError(true)
-      setErrorMsg('Something went wrong. Please try again.')
-    } finally {
-      setIsLoading(false)
+      setErrorMsg(
+        data.error_msg || "Username and Password didn't match",
+      )
     }
+  } catch (error) {
+    console.error('LOGIN ERROR:', error)
+    setShowSubmitError(true)
+    setErrorMsg('Something went wrong. Please try again.')
+  } finally {
+    setIsSubmitting(false)
   }
+}
 
   return (
     <div className="login-form-container">
@@ -93,7 +80,7 @@ const Login = () => {
           />
         </div>
 
-        <form className="form-container" onSubmit={onSubmitForm}>
+        <form className="form-container" onSubmit={onSubmitLogin}>
           <div className="input-container">
             <label className="input-label" htmlFor="username">
               USERNAME
@@ -105,6 +92,7 @@ const Login = () => {
               className="username-input-field"
               value={username}
               onChange={onChangeUsername}
+              placeholder="Username"
             />
           </div>
 
@@ -119,6 +107,7 @@ const Login = () => {
               className="password-input-field"
               value={password}
               onChange={onChangePassword}
+              placeholder="Password"
             />
           </div>
 
@@ -128,7 +117,7 @@ const Login = () => {
               type="checkbox"
               className="checkbox-input"
               checked={showPassword}
-              onChange={onToggleShowPassword}
+              onChange={onChangeShowPassword}
             />
 
             <label
@@ -140,12 +129,29 @@ const Login = () => {
           </div>
 
           <button
-            type="submit"
-            className="login-button"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Logging in...' : 'Login'}
-          </button>
+  type="submit"
+  className="login-button"
+  disabled={isSubmitting}
+>
+  {isSubmitting ? 'Logging in...' : 'Login'}
+</button>
+
+<div className="register-container">
+  <p>
+    Don't have an account?{' '}
+    <button
+      type="button"
+      className="register-button"
+      onClick={() => navigate('/register')}
+    >
+      Register
+    </button>
+  </p>
+</div>
+
+{showSubmitError && (
+  <p className="error-message">*{errorMsg}</p>
+)}
 
           {showSubmitError && (
             <p className="error-message">*{errorMsg}</p>

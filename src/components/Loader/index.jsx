@@ -1,7 +1,10 @@
 import React from 'react'
+import './index.css'
 
-const Loader = () => {
-  return <div data-testid="loader">Loading...</div>
-}
+const Loader = () => (
+  <div className="loader-container" data-testid="loader">
+    <div className="loader"></div>
+  </div>
+)
 
 export default Loader

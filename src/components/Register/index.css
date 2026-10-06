@@ -1,0 +1,23 @@
+.register-container {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.register-container p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.register-button {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.register-button:hover {
+  text-decoration: underline;
+}

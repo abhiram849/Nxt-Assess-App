@@ -2,6 +2,7 @@ import React from 'react'
 import {BrowserRouter, Routes, Route, Navigate} from 'react-router-dom'
 import {EvaluationProvider} from './context/EvaluationContext.jsx'
 import Login from './components/Login/index.jsx'
+import Register from './components/Register'
 import Home from './components/Home/index.jsx'
 import Assessment from './components/Assessment/index.jsx'
 import Results from './components/Results/index.jsx'
@@ -17,6 +18,7 @@ const App = () => {
           <main className="main-content">
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route
                 path="/"
                 element={

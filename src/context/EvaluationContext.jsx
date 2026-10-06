@@ -1,5 +1,10 @@
-import React, {createContext, useState, useCallback, useMemo} from 'react'
-import Cookies from 'js-cookie'
+import React, {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 const EvaluationContext = createContext({
   isAuthenticated: false,
@@ -17,27 +22,49 @@ const EvaluationContext = createContext({
 })
 
 export const EvaluationProvider = ({children}) => {
-  const getInitialToken = () => {
-    return Cookies.get('jwt_token') || localStorage.getItem('jwt_token') || null
-  }
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  const [token, setToken] = useState(getInitialToken)
   const [score, setScore] = useState(0)
   const [timeTakenInSeconds, setTimeTakenInSeconds] = useState(0)
   const [formattedTime, setFormattedTime] = useState('00:00:00')
   const [isTimeUp, setIsTimeUp] = useState(false)
 
-  const isAuthenticated = Boolean(token)
+  const checkAuthentication = useCallback(async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/me', {
+        method: 'GET',
+        credentials: 'include',
+      })
 
-  const login = useCallback(jwtToken => {
-    localStorage.setItem('jwt_token', jwtToken)
-    setToken(jwtToken)
+      setIsAuthenticated(response.ok)
+    } catch (error) {
+      console.error('AUTH CHECK ERROR:', error)
+      setIsAuthenticated(false)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  const logout = useCallback(() => {
-    Cookies.remove('jwt_token')
-    localStorage.removeItem('jwt_token')
-    setToken(null)
+  useEffect(() => {
+    checkAuthentication()
+  }, [checkAuthentication])
+
+  const login = useCallback(() => {
+    setIsAuthenticated(true)
+  }, [])
+
+  const logout = useCallback(async () => {
+    try {
+      await fetch('http://localhost:5000/api/logout', {
+        method: 'POST',
+        credentials: 'include',
+      })
+    } catch (error) {
+      console.error('LOGOUT ERROR:', error)
+    }
+
+    setIsAuthenticated(false)
     setScore(0)
     setTimeTakenInSeconds(0)
     setFormattedTime('00:00:00')
@@ -77,6 +104,10 @@ export const EvaluationProvider = ({children}) => {
       resetAssessment,
     ],
   )
+
+  if (loading) {
+    return null
+  }
 
   return (
     <EvaluationContext.Provider value={contextValue}>

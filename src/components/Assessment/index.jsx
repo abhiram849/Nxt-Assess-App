@@ -7,21 +7,14 @@ import React, {
 } from 'react'
 import {useNavigate} from 'react-router-dom'
 import EvaluationContext from '../../context/EvaluationContext.jsx'
-import Header from '../Header/index.jsx'
-import Question from '../Question/index.jsx'
-import QuestionPalette from '../QuestionPalette/index.jsx'
+import Header from '../Header'
+import Question from '../Question'
+import QuestionPalette from '../QuestionPalette'
+import Loader from '../Loader'
 import './index.css'
 
-const questionsApiUrl = 'https://apis.ccbp.in/assess/questions'
-
-const apiStatusConstants = {
-  initial: 'INITIAL',
-  inProgress: 'IN_PROGRESS',
-  success: 'SUCCESS',
-  failure: 'FAILURE',
-}
-
-const TOTAL_DURATION_IN_SECONDS = 600
+const assessmentApiUrl = 'https://apis.ccbp.in/assess/questions'
+const TOTAL_TIME = 10 * 60
 
 const Assessment = () => {
   const {setScore, setTimeTakenInSeconds, setFormattedTime, setIsTimeUp} =
@@ -30,12 +23,11 @@ const Assessment = () => {
   const navigate = useNavigate()
 
   const [questions, setQuestions] = useState([])
+  const [totalQuestions, setTotalQuestions] = useState(0)
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(0)
   const [userAnswers, setUserAnswers] = useState({})
-  const [timeRemainingInSeconds, setTimeRemainingInSeconds] = useState(
-    TOTAL_DURATION_IN_SECONDS,
-  )
-  const [apiStatus, setApiStatus] = useState(apiStatusConstants.initial)
+  const [timeRemaining, setTimeRemaining] = useState(TOTAL_TIME)
+  const [apiStatus, setApiStatus] = useState('INITIAL')
 
   const timerRef = useRef(null)
 
@@ -51,87 +43,87 @@ const Assessment = () => {
 
   const calculateScore = useCallback(
     answers => {
-      let totalScore = 0
+      let score = 0
 
       questions.forEach(question => {
-        const selectedId = answers[question.id]
+        const selectedOptionId = answers[question.id]
 
-        const selectedOption = question.options.find(
-          option => option.id === selectedId,
+        const selectedOption = question.options?.find(
+          option => option.id === selectedOptionId,
         )
 
         if (
           selectedOption &&
-          (selectedOption.is_correct === 'true' ||
-            selectedOption.is_correct === true)
+          (selectedOption.is_correct === true ||
+            selectedOption.is_correct === 'true')
         ) {
-          totalScore += 1
+          score += 1
         }
       })
 
-      return totalScore
+      return score
     },
     [questions],
   )
 
-  const finishAssessment = useCallback(
-    isTimeUpValue => {
+  const submitAssessment = useCallback(
+    (isTimeUp = false) => {
       if (timerRef.current) {
         clearInterval(timerRef.current)
       }
 
       const score = calculateScore(userAnswers)
 
-      const timeTaken = isTimeUpValue
-        ? TOTAL_DURATION_IN_SECONDS
-        : TOTAL_DURATION_IN_SECONDS - timeRemainingInSeconds
+      const timeTaken = isTimeUp ? TOTAL_TIME : TOTAL_TIME - timeRemaining
 
       setScore(score)
       setTimeTakenInSeconds(timeTaken)
       setFormattedTime(formatTime(timeTaken))
-      setIsTimeUp(isTimeUpValue)
+      setIsTimeUp(isTimeUp)
 
       navigate('/results', {replace: true})
     },
     [
       calculateScore,
-      navigate,
-      setFormattedTime,
-      setIsTimeUp,
+      userAnswers,
+      timeRemaining,
       setScore,
       setTimeTakenInSeconds,
-      timeRemainingInSeconds,
-      userAnswers,
+      setFormattedTime,
+      setIsTimeUp,
+      navigate,
     ],
   )
 
-  const getQuestions = useCallback(async () => {
-    setApiStatus(apiStatusConstants.inProgress)
+  const getQuestions = async () => {
+    setApiStatus('IN_PROGRESS')
 
     try {
-      const response = await fetch(questionsApiUrl)
+      const response = await fetch(assessmentApiUrl)
 
-      if (response.ok) {
-        const data = await response.json()
-
-        setQuestions(data.questions || [])
-        setActiveQuestionIndex(0)
-
-        // Do not automatically select any option.
-        // Answered Questions count starts at 0.
-        setUserAnswers({})
-
-        setTimeRemainingInSeconds(TOTAL_DURATION_IN_SECONDS)
-        setApiStatus(apiStatusConstants.success)
-      } else {
-        setApiStatus(apiStatusConstants.failure)
+      if (!response.ok) {
+        throw new Error('Request failed')
       }
-    } catch {
-      setApiStatus(apiStatusConstants.failure)
-    }
-  }, [])
 
-  // Fetch questions when Assessment loads.
+      const data = await response.json()
+
+      const receivedQuestions = data.questions || []
+
+      setQuestions(receivedQuestions)
+      setTotalQuestions(
+        typeof data.total === 'number' ? data.total : receivedQuestions.length,
+      )
+
+      setActiveQuestionIndex(0)
+      setUserAnswers({})
+      setTimeRemaining(TOTAL_TIME)
+
+      setApiStatus('SUCCESS')
+    } catch {
+      setApiStatus('FAILURE')
+    }
+  }
+
   useEffect(() => {
     getQuestions()
 
@@ -140,16 +132,52 @@ const Assessment = () => {
         clearInterval(timerRef.current)
       }
     }
-  }, [getQuestions])
+  }, [])
 
-  // Start countdown only after questions are successfully loaded.
+  /*
+   * Automatically select the first option when the
+   * active question is SINGLE_SELECT.
+   *
+   * This also handles the FIRST question after the API
+   * request succeeds.
+   */
   useEffect(() => {
-    if (apiStatus !== apiStatusConstants.success) {
+    if (apiStatus !== 'SUCCESS' || questions.length === 0) {
+      return
+    }
+
+    const question = questions[activeQuestionIndex]
+
+    if (!question) {
+      return
+    }
+
+    if (
+      question.options_type === 'SINGLE_SELECT' &&
+      !userAnswers[question.id] &&
+      question.options?.length > 0
+    ) {
+      setUserAnswers(previousAnswers => ({
+        ...previousAnswers,
+        [question.id]: question.options[0].id,
+      }))
+    }
+  }, [apiStatus, questions, activeQuestionIndex, userAnswers])
+
+  /*
+   * Start countdown after successful API response.
+   */
+  useEffect(() => {
+    if (apiStatus !== 'SUCCESS') {
       return undefined
     }
 
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+    }
+
     timerRef.current = setInterval(() => {
-      setTimeRemainingInSeconds(previousTime => {
+      setTimeRemaining(previousTime => {
         if (previousTime <= 1) {
           clearInterval(timerRef.current)
           return 0
@@ -166,30 +194,32 @@ const Assessment = () => {
     }
   }, [apiStatus])
 
-  // Automatically submit when timer reaches zero.
   useEffect(() => {
-    if (
-      apiStatus === apiStatusConstants.success &&
-      timeRemainingInSeconds === 0
-    ) {
-      finishAssessment(true)
+    if (apiStatus === 'SUCCESS' && timeRemaining === 0) {
+      submitAssessment(true)
     }
-  }, [apiStatus, finishAssessment, timeRemainingInSeconds])
+  }, [apiStatus, timeRemaining, submitAssessment])
 
+  /*
+   * Selecting an option answers the question only once.
+   *
+   * Changing an already-selected answer does NOT change
+   * the answered/unanswered counts.
+   */
   const onSelectOption = optionId => {
-    const activeQuestion = questions[activeQuestionIndex]
+    const question = questions[activeQuestionIndex]
 
-    if (!activeQuestion) {
+    if (!question) {
       return
     }
 
     setUserAnswers(previousAnswers => ({
       ...previousAnswers,
-      [activeQuestion.id]: optionId,
+      [question.id]: optionId,
     }))
   }
 
-  const onSelectQuestionNumber = index => {
+  const onClickQuestionNumber = index => {
     setActiveQuestionIndex(index)
   }
 
@@ -199,27 +229,24 @@ const Assessment = () => {
     }
   }
 
-  const answeredCount = Object.keys(userAnswers).length
-  const unansweredCount = questions.length - answeredCount
+  const onRetry = () => {
+    getQuestions()
+  }
 
-  if (
-    apiStatus === apiStatusConstants.initial ||
-    apiStatus === apiStatusConstants.inProgress
-  ) {
+  if (apiStatus === 'INITIAL' || apiStatus === 'IN_PROGRESS') {
     return (
       <>
         <Header />
-        <div className="loader-container" data-testid="loader">
-          <div className="loader">Loading...</div>
-        </div>
+        <Loader />
       </>
     )
   }
 
-  if (apiStatus === apiStatusConstants.failure) {
+  if (apiStatus === 'FAILURE') {
     return (
       <>
         <Header />
+
         <div className="failure-view-container">
           <img
             src="/assets/failure.svg"
@@ -227,19 +254,11 @@ const Assessment = () => {
             className="failure-image"
           />
 
-          <h1 className="failure-heading">
-            Oops! Something Went Wrong
-          </h1>
+          <h1 className="failure-heading">Oops! Something went wrong</h1>
 
-          <p className="failure-description">
-            We are having some trouble fetching the questions
-          </p>
+          <p className="failure-description">We are having some trouble</p>
 
-          <button
-            type="button"
-            className="retry-button"
-            onClick={getQuestions}
-          >
+          <button type="button" className="retry-button" onClick={onRetry}>
             Retry
           </button>
         </div>
@@ -253,35 +272,35 @@ const Assessment = () => {
     return null
   }
 
+  const answeredCount = Object.keys(userAnswers).length
+
+  const unansweredCount = Math.max(totalQuestions - answeredCount, 0)
+
   return (
     <>
       <Header />
 
       <div className="assessment-container">
-        <div className="assessment-main-content">
-          <div className="assessment-body">
-            <Question
-              question={activeQuestion}
-              questionNumber={activeQuestionIndex + 1}
-              selectedOption={userAnswers[activeQuestion.id]}
-              onSelectOption={onSelectOption}
-              isLastQuestion={
-                activeQuestionIndex === questions.length - 1
-              }
-              onClickNextQuestion={onClickNextQuestion}
-            />
+        <div className="assessment-body">
+          <Question
+            question={activeQuestion}
+            questionNumber={activeQuestionIndex + 1}
+            selectedOptionId={userAnswers[activeQuestion.id]}
+            onSelectOption={onSelectOption}
+            isLastQuestion={activeQuestionIndex === questions.length - 1}
+            onClickNextQuestion={onClickNextQuestion}
+          />
 
-            <QuestionPalette
-              questions={questions}
-              activeQuestionIndex={activeQuestionIndex}
-              userAnswers={userAnswers}
-              onSelectQuestion={onSelectQuestionNumber}
-              onSubmitAssessment={() => finishAssessment(false)}
-              answeredCount={answeredCount}
-              unansweredCount={unansweredCount}
-              timeRemainingInSeconds={timeRemainingInSeconds}
-            />
-          </div>
+          <QuestionPalette
+            questions={questions}
+            activeQuestionIndex={activeQuestionIndex}
+            userAnswers={userAnswers}
+            onSelectQuestion={onClickQuestionNumber}
+            onSubmitAssessment={() => submitAssessment(false)}
+            answeredCount={answeredCount}
+            unansweredCount={unansweredCount}
+            timeRemainingInSeconds={timeRemaining}
+          />
         </div>
       </div>
     </>

@@ -1,13 +1,11 @@
 import React, {useContext} from 'react'
 import {Navigate} from 'react-router-dom'
-import Cookies from 'js-cookie'
-import EvaluationContext from '../../context/EvaluationContext.jsx'
+import EvaluationContext from '../../context/EvaluationContext'
 
 const ProtectedRoute = ({children}) => {
   const {isAuthenticated} = useContext(EvaluationContext)
-  const token = Cookies.get('jwt_token') || localStorage.getItem('jwt_token')
 
-  if (!isAuthenticated && !token) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 

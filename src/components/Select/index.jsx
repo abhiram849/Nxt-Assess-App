@@ -17,6 +17,7 @@ const Select = ({options, selectedOptionId, onChangeOption}) => {
           ))}
         </select>
       </div>
+
       <p className="default-selected-text">
         First option is selected by default
       </p>
